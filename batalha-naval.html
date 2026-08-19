@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Batalha Naval Web</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-green: #22c55e;
+            --accent-red: #ef4444;
+            --black-cell: #090d16;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --board-empty: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px 8px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 12px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: #f1f5f9;
+        }
+
+        .subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Controles de Tamanho */
+        .size-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            background-color: var(--card-bg);
+            padding: 8px 16px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        .size-btn {
+            background-color: #334155;
+            color: var(--text-main);
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .size-btn:hover:not(:disabled) {
+            background-color: #475569;
+        }
+
+        .size-btn:active:not(:disabled) {
+            transform: scale(0.95);
+        }
+
+        .size-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .size-display {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #38bdf8;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        /* Contêiner dos Tabuleiros */
+        .boards-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            max-width: 600px;
+            align-items: center;
+        }
+
+        .board-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 10px;
+            width: 100%;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .board-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            width: 100%;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .title-enemy {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .title-friendly {
+            background-color: rgba(34, 197, 94, 0.15);
+            color: #86efac;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        /* Grid Dinâmico */
+        .board-grid {
+            display: grid;
+            gap: 2px;
+            width: 100%;
+            max-width: 480px;
+            aspect-ratio: 1 / 1;
+        }
+
+        .cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: transform 0.05s ease, background-color 0.15s ease;
+        }
+
+        .cell:active:not(.header-cell) {
+            transform: scale(0.92);
+        }
+
+        /* Headers */
+        .header-cell {
+            background-color: transparent;
+            color: var(--text-muted);
+            font-size: clamp(0.5rem, 1.8vw, 0.75rem);
+            font-weight: 600;
+            cursor: default;
+        }
+
+        /* Células Iniciais (Estado 0 - Limpo) */
+        .data-cell {
+            background-color: var(--board-empty);
+        }
+
+        /* Estados de Cores */
+        .data-cell.state-1 { background-color: var(--accent-green) !important; }
+        .data-cell.state-2 { background-color: var(--accent-red) !important; }
+        .data-cell.state-3 { background-color: var(--black-cell) !important; }
+
+        /* Legenda Footer */
+        .legend-container {
+            margin-top: 20px;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 12px 16px;
+            width: 100%;
+            max-width: 600px;
+            font-size: 0.8rem;
+        }
+
+        .legend-title {
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-badge {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .bg-green { background-color: var(--accent-green); }
+        .bg-red { background-color: var(--accent-red); }
+        .bg-black { background-color: var(--black-cell); }
+
+        .btn-reset {
+            margin-top: 16px;
+            background: transparent;
+            border: 1px solid #475569;
+            color: #94a3b8;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-reset:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: #f1f5f9;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 id="mainTitle">BATALHA NAVAL 12x12</h1>
+        <div class="subtitle">Clique na célula para alternar a cor (Ciclo de 4 estados)</div>
+    </header>
+
+    <!-- Seletor de Tamanho -->
+    <div class="size-controls">
+        <button class="size-btn" id="btnDecrease" onclick="changeSize(-1)" title="Diminuir tamanho">-</button>
+        <span class="size-display" id="sizeDisplay">12 x 12</span>
+        <button class="size-btn" id="btnIncrease" onclick="changeSize(1)" title="Aumentar tamanho">+</button>
+    </div>
+
+    <div class="boards-container">
+        <!-- 1º Campo: Inimigo -->
+        <div class="board-card">
+            <div class="board-title title-enemy">1º Campo: Campo Inimigo</div>
+            <div class="board-grid" id="enemyGrid"></div>
+        </div>
+
+        <!-- 2º Campo: Amigo -->
+        <div class="board-card">
+            <div class="board-title title-friendly">2º Campo: Campo Amigo</div>
+            <div class="board-grid" id="friendlyGrid"></div>
+        </div>
+    </div>
+
+    <!-- Legenda das Regras -->
+    <div class="legend-container">
+        <div class="legend-title">Ciclo de Cliques (Ambos os Campos)</div>
+        <div class="legend-grid">
+            <div class="legend-item">
+                <div class="legend-badge bg-green"></div>
+                <span>1º Clique &rarr; Verde</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-badge bg-red"></div>
+                <span>2º Clique &rarr; Vermelho</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-badge bg-black"></div>
+                <span>3º Clique &rarr; Preto</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-badge" style="border: 1px dashed #94a3b8; background-color: var(--board-empty);"></div>
+                <span>4º Clique &rarr; Limpo</span>
+            </div>
+        </div>
+    </div>
+
+    <button class="btn-reset" onclick="resetBoards()">Reiniciar Tabuleiros</button>
+
+    <script>
+        let currentSize = 12;
+        const MIN_SIZE = 6;
+        const MAX_SIZE = 16;
+
+        // Verifica se há alguma célula preenchida nos tabuleiros
+        function isAnyCellFilled() {
+            const filledCells = document.querySelectorAll('.data-cell:not([data-state="0"])');
+            return filledCells.length > 0;
+        }
+
+        // Atualiza a interface e estado dos botões
+        function updateSizeUI() {
+            document.getElementById('sizeDisplay').textContent = `${currentSize} x ${currentSize}`;
+            document.getElementById('mainTitle').textContent = `BATALHA NAVAL ${currentSize}x${currentSize}`;
+            
+            document.getElementById('btnDecrease').disabled = (currentSize <= MIN_SIZE);
+            document.getElementById('btnIncrease').disabled = (currentSize >= MAX_SIZE);
+        }
+
+        // Função para alterar o tamanho dos tabuleiros
+        function changeSize(delta) {
+            const newSize = currentSize + delta;
+            
+            if (newSize < MIN_SIZE || newSize > MAX_SIZE) return;
+
+            // Validação de segurança solicitada
+            if (isAnyCellFilled()) {
+                alert("Limpe os tabuleiros antes de alterar o tamanho!");
+                return;
+            }
+
+            currentSize = newSize;
+            updateSizeUI();
+            renderBoards();
+        }
+
+        function createBoard(gridId) {
+            const grid = document.getElementById(gridId);
+            grid.innerHTML = '';
+
+            // Grid responsivo com base no tamanho atual
+            grid.style.gridTemplateColumns = `minmax(14px, 22px) repeat(${currentSize}, minmax(10px, 1fr))`;
+
+            // Cantinho superior esquerdo
+            const corner = document.createElement('div');
+            corner.className = 'cell header-cell';
+            grid.appendChild(corner);
+
+            // Cabeçalho das Colunas (1..N)
+            for (let c = 1; c <= currentSize; c++) {
+                const header = document.createElement('div');
+                header.className = 'cell header-cell';
+                header.textContent = c;
+                grid.appendChild(header);
+            }
+
+            // Função para gerar rótulo das Linhas (A, B, C...)
+            function getRowLabel(index) {
+                let label = '';
+                while (index >= 0) {
+                    label = String.fromCharCode((index % 26) + 65) + label;
+                    index = Math.floor(index / 26) - 1;
+                }
+                return label;
+            }
+
+            // Linhas (A..N)
+            for (let r = 0; r < currentSize; r++) {
+                const rowHeader = document.createElement('div');
+                rowHeader.className = 'cell header-cell';
+                rowHeader.textContent = getRowLabel(r);
+                grid.appendChild(rowHeader);
+
+                // Células de dados
+                for (let c = 1; c <= currentSize; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell data-cell';
+                    cell.dataset.state = "0"; // 0: Limpo, 1: Verde, 2: Vermelho, 3: Preto
+
+                    cell.addEventListener('click', () => handleCellClick(cell));
+                    grid.appendChild(cell);
+                }
+            }
+        }
+
+        function renderBoards() {
+            createBoard('enemyGrid');
+            createBoard('friendlyGrid');
+        }
+
+        function handleCellClick(cell) {
+            let currentState = parseInt(cell.dataset.state) || 0;
+            // Ciclo: 0 -> 1 -> 2 -> 3 -> 0
+            let nextState = (currentState + 1) % 4;
+            
+            cell.dataset.state = nextState;
+            cell.classList.remove('state-1', 'state-2', 'state-3');
+
+            if (nextState === 1) {
+                cell.classList.add('state-1');
+            } else if (nextState === 2) {
+                cell.classList.add('state-2');
+            } else if (nextState === 3) {
+                cell.classList.add('state-3');
+            }
+        }
+
+        function resetBoards() {
+            if (confirm("Deseja realmente limpar todos os tabuleiros?")) {
+                document.querySelectorAll('.data-cell').forEach(cell => {
+                    cell.dataset.state = "0";
+                    cell.classList.remove('state-1', 'state-2', 'state-3');
+                });
+            }
+        }
+
+        // Inicialização
+        updateSizeUI();
+        renderBoards();
+    </script>
+</body>
+</html>
